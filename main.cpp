@@ -1,174 +1,62 @@
-#include <QApplication>
-#include <QLabel>
-#include <QLineEdit>
-#include <QPushButton>
-#include <QHBoxLayout>
-#include <QVBoxLayout>
+#include "main.h"
 
-#include <vector>
-#include <cstdio>
+//int main(int argc, char* argv[])
+//{
+//    printf("Hello World!\n");
 
-#include <thread>
+//    TemperatureModel model(0);
 
-class Observer
-{
-public:
+//    std::thread guiThread([&]()
+//    {
+//        QApplication app(argc, argv);
 
-    virtual void update() = 0;
-};
+//        GuiViewController gui(&model);
+//        gui.start();
 
-class Observable
-{
-public:
+//        app.exec();
+//    });
 
-    void addObserver(Observer *observer)
-    {
-        mObservers.push_back(observer);
-    }
+//    std::thread consoleThread([&]()
+//    {
+//        ConsoleView view(&model);
+//        Controller controller(&model);
 
-    void notifyUpdate()
-    {
-        int size = mObservers.size();
-        for (int i = 0; i < size; i++)
-        {
-            mObservers[i]->update();
-        }
-    }
+//        controller.start();
+//    });
 
-private:
+//    guiThread.join();
+//    consoleThread.join();
 
-    std::vector<Observer*> mObservers;
-};
+//    printf("Bye!\n");
 
-class TemperatureModel: public Observable
-{
-public:
+//    return 0;
+//}
 
-    TemperatureModel(float tempF)
-    {
-        mTemperatureF = tempF;
-    }
-
-    float getF()
-    {
-        return mTemperatureF;
-    }
-
-    float getC()
-    {
-        return (mTemperatureF - 32.0) * 5.0 / 9.0;
-    }
-
-    void setF(float tempF)
-    {
-        mTemperatureF = tempF;
-        notifyUpdate();
-    }
-
-    void setC(float tempC)
-    {
-        mTemperatureF = tempC * 9.0 / 5.0 + 32.0;
-        notifyUpdate();
-    }
-
-private:
-
-    float mTemperatureF;
-};
-
-class ConsoleView: public Observer
-{
-public:
-
-    ConsoleView(TemperatureModel *model)
-    {
-        mModel = model;
-        mModel->addObserver(this);
-    }
-
-    virtual void update()
-    {
-        printf("Temperature in Celsius: %.2f\n", mModel->getC());
-        printf("Temperature in Farenheit: %.2f\n", mModel->getF());
-        printf("Input temperature in Celsius: ");
-    }
-
-private:
-
-    TemperatureModel *mModel;
-};
-
-class Controller
-{
-public:
-
-    Controller(TemperatureModel *model)
-    {
-        mModel = model;
-    }
-
-    void start()
-    {
-        mModel->setC(0);
-
-        float temp;
-        do
-        {
-            scanf("%f", &temp);
-            mModel->setC(temp);
-        }
-        while (temp != 0);
-    }
-
-private:
-
-    TemperatureModel *mModel;
-};
+/* Экземпляр QApplication должен быть создан в main()-потоке,
+ * иначе при завершении приложения будут возникать предупреждения вида
+ * "QObject::~QObject: Timers cannot be stopped from another thread". */
 
 int main(int argc, char* argv[])
 {
     printf("Hello World!\n");
 
-    std::thread guiThread([&]()
-    {
-        QApplication app(argc, argv);
+    TemperatureModel model(0);
 
-        QHBoxLayout *hLayout = new QHBoxLayout;
-        QLabel *label1 = new QLabel("Temperature:");
-        QLabel *label2 = new QLabel("- C");
-        QLabel *label3 = new QLabel("- F");
-        hLayout->addWidget(label1);
-        hLayout->addWidget(label2);
-        hLayout->addWidget(label3);
+    QApplication app(argc, argv);
 
-        QVBoxLayout *vLayout = new QVBoxLayout;
-        QLineEdit *lineEdit1 = new QLineEdit;
-        QPushButton *button1 = new QPushButton("Enter");
-        vLayout->addWidget(lineEdit1);
-        vLayout->addWidget(button1);
-
-        QVBoxLayout *mainLayout = new QVBoxLayout;
-        mainLayout->addLayout(hLayout);
-        mainLayout->addLayout(vLayout);
-
-        QWidget *w = new QWidget;
-        w->setLayout(mainLayout);
-        w->setWindowTitle("Temperature");
-        w->show();
-
-        app.exec();
-    });
+    GuiViewController gui(&model);
+    gui.start();
 
     std::thread consoleThread([&]()
     {
-        TemperatureModel model(0);
         ConsoleView view(&model);
         Controller controller(&model);
 
         controller.start();
     });
 
-    guiThread.join();
+    app.exec();
+
     consoleThread.join();
 
     printf("Bye!\n");
